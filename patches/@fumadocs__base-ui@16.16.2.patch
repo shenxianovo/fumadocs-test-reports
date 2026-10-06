@@ -1,0 +1,13 @@
+diff --git a/dist/layouts/flux/page/slots/container.js b/dist/layouts/flux/page/slots/container.js
+index 2daf27277c0f1a97498391e13901c4cf0fbf0b05..149df8db3b98ddaad957e8f0ca23c0def15fefc0 100644
+--- a/dist/layouts/flux/page/slots/container.js
++++ b/dist/layouts/flux/page/slots/container.js
+@@ -6,7 +6,7 @@ import { jsx } from "react/jsx-runtime";
+ function Container(props) {
+ 	const { full } = useDocsPage();
+ 	return /* @__PURE__ */ jsx("main", {
+-		className: "grid [grid-area:main] justify-items-center",
++		className: "grid w-full [grid-area:main] justify-items-center",
+ 		"data-layout-main": "",
+ 		children: /* @__PURE__ */ jsx("article", {
+ 			id: "nd-page",

@@ -1,0 +1,31 @@
+{
+  "name": "root",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "turbo run build",
+    "clean": "turbo run clean",
+    "dev": "turbo run dev",
+    "dev:examples": "turbo run dev --filter=./examples/*",
+    "lint": "turbo run lint",
+    "lint:format": "oxfmt --check",
+    "format": "oxfmt",
+    "test": "vitest",
+    "types:check": "turbo run types:check --continue",
+    "dev:docs": "pnpm --filter docs dev --hostname 127.0.0.1 --port 3010"
+  },
+  "devDependencies": {
+    "oxfmt": "^0.71.0",
+    "oxlint": "^1.86.0",
+    "rimraf": "^6.1.3",
+    "tegami": "^1.5.0",
+    "turbo": "2.11.7",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.3"
+  },
+  "engines": {
+    "node": ">= 24.14.0"
+  },
+  "packageManager": "pnpm@12.8.1"
+}

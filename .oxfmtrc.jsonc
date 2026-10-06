@@ -1,0 +1,16 @@
+{
+  "$schema": "./node_modules/oxfmt/configuration_schema.json",
+  "singleQuote": true,
+  "embeddedLanguageFormatting": "auto",
+  "ignorePatterns": [
+    "CHANGELOG.md",
+    "**/next-env.d.ts",
+    "pnpm-lock.yaml",
+    "**/fixtures/**",
+    "examples/docs/public/reports/**",
+    "**/dist/**",
+    "**/.next/**",
+    "**/.source/**",
+    "**/.turbo/**",
+  ],
+}

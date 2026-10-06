@@ -1,0 +1,10 @@
+packages:
+  - packages/*
+  - examples/*
+minimumReleaseAgeExclude:
+  - '@fumadocs/base-ui@16.16.2'
+  - fumadocs-core@16.16.2
+allowBuilds:
+  esbuild: false
+patchedDependencies:
+  '@fumadocs/base-ui@16.16.2': patches/@fumadocs__base-ui@16.16.2.patch

@@ -1,0 +1,52 @@
+{
+  "name": "fumadocs-test-reports",
+  "version": "0.1.0",
+  "description": "Test report adapters and React UI for Fumadocs",
+  "keywords": [
+    "fumadocs",
+    "react",
+    "test-report",
+    "tunit"
+  ],
+  "license": "MIT",
+  "files": [
+    "dist",
+    "css"
+  ],
+  "type": "module",
+  "sideEffects": [
+    "./css/**/*.css"
+  ],
+  "exports": {
+    "./tunit": "./dist/tunit/index.js",
+    "./tunit/ui": "./dist/tunit/ui/index.js",
+    "./ui": "./dist/ui/index.js",
+    "./css/*": "./css/*"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "scripts": {
+    "build": "tsdown",
+    "clean": "rimraf dist",
+    "dev": "tsdown --watch --clean false",
+    "prepack": "pnpm build",
+    "lint": "oxlint .",
+    "types:check": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "26.6.4",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "fumadocs-core": "16.16.2",
+    "fumadocs-ui": "npm:@fumadocs/base-ui@16.16.2",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "tsdown": "0.23.0"
+  },
+  "peerDependencies": {
+    "fumadocs-ui": "^16.16.2",
+    "react": "^19.2.0"
+  }
+}

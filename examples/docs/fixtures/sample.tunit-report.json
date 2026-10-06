@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "assemblyName": "Report feature examples",
+  "tunitVersion": "1.72.16",
+  "totalDurationMs": 2500,
+  "groups": [{
+    "className": "ExampleTests",
+    "namespace": "Demonstration fixtures",
+    "tests": [
+      {"id":"passed", "displayName":"Accepts a valid request", "status":"passed", "durationMs":12.5},
+      {"id":"failed", "displayName":"Rejects an invalid request", "status":"failed", "durationMs":42, "exception":{"type":"AssertionException", "message":"Expected 400, received 200.", "stackTrace":"at ExampleTests.RejectsInvalidRequest()"}, "errorOutput":"Example error output"},
+      {"id":"retried", "displayName":"Connects after a retry", "status":"passed", "durationMs":150, "retryAttempt":1, "attempts":[{"status":"failed", "durationMs":100, "exceptionType":"ConnectionException", "exceptionMessage":"Connection refused"}, {"status":"passed", "durationMs":50}]},
+      {"id":"skipped", "displayName":"Requires an optional device", "status":"skipped", "skipReason":"Device not available"},
+      {"id":"timeout", "displayName":"Waits for a response", "status":"timedOut", "durationMs":2000},
+      {"id":"unknown", "displayName":"Preserves a producer-specific outcome", "status":"customOutcome"}
+    ]
+  }]
+}
