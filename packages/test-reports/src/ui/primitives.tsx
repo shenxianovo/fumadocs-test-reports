@@ -29,7 +29,7 @@ export function Duration({ value, unknownLabel = 'Unknown', className }: Duratio
       : value >= 1000
         ? `${(value / 1000).toFixed(2)} s`
         : `${value.toFixed(1)} ms`;
-  return <span className={className}>{text}</span>;
+  return <span className={`ftr-duration ${className ?? ''}`}>{text}</span>;
 }
 
 export interface ErrorDetailProps {

@@ -1,16 +1,12 @@
+'use client';
+
 import type { TUnitSpan } from '../types';
 import { Accordion, Accordions } from 'fumadocs-ui/components/accordion';
 import { Duration, StdoutPanel } from '../../ui';
-import { getLabels, type TUnitReportLocale } from './labels';
+import { useLabels } from './labels';
 
-export function TUnitTraceTimeline({
-  spans,
-  locale,
-}: {
-  spans: TUnitSpan[];
-  locale: TUnitReportLocale;
-}) {
-  const labels = getLabels(locale);
+export function TUnitTraceTimeline({ spans }: { spans: TUnitSpan[] }) {
+  const labels = useLabels();
   const origin = Math.min(...spans.map((span) => span.startTimeMs));
   const extent = Math.max(...spans.map((span) => span.startTimeMs + span.durationMs)) - origin || 1;
   const byId = new Map(spans.map((span) => [`${span.traceId}:${span.spanId}`, span]));
@@ -54,13 +50,13 @@ export function TUnitTraceTimeline({
             }
           >
             <dl className="ftr-fields">
-              <dt>Trace ID</dt>
+              <dt>{labels.traceId}</dt>
               <dd>{span.traceId}</dd>
-              <dt>Span ID</dt>
+              <dt>{labels.spanId}</dt>
               <dd>{span.spanId}</dd>
               {span.parentSpanId && (
                 <>
-                  <dt>Parent ID</dt>
+                  <dt>{labels.parentId}</dt>
                   <dd>{span.parentSpanId}</dd>
                 </>
               )}
@@ -72,13 +68,13 @@ export function TUnitTraceTimeline({
               )}
               {span.kind && (
                 <>
-                  <dt>Kind</dt>
+                  <dt>{labels.kind}</dt>
                   <dd>{span.kind}</dd>
                 </>
               )}
               {span.status && (
                 <>
-                  <dt>Status</dt>
+                  <dt>{labels.status}</dt>
                   <dd>
                     {span.status}
                     {span.statusMessage ? `: ${span.statusMessage}` : ''}
@@ -93,10 +89,10 @@ export function TUnitTraceTimeline({
               ))}
             </dl>
             {!!span.events?.length && (
-              <StdoutPanel content={JSON.stringify(span.events, null, 2)} title="Events" />
+              <StdoutPanel content={JSON.stringify(span.events, null, 2)} title={labels.events} />
             )}
             {!!span.links?.length && (
-              <StdoutPanel content={JSON.stringify(span.links, null, 2)} title="Links" />
+              <StdoutPanel content={JSON.stringify(span.links, null, 2)} title={labels.links} />
             )}
           </Accordion>
         ))}

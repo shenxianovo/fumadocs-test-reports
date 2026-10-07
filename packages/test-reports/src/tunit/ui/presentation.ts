@@ -1,10 +1,9 @@
 import type { BadgeTone } from '../../ui';
 import type { TUnitReport } from '../types';
-import { getLabels, type TUnitReportLocale } from './labels';
+import type { ReportLabels } from './labels';
 
 /** TUnit-specific display decisions, never a persisted or shared test model. */
-export function statusDisplay(status: string, locale: TUnitReportLocale) {
-  const labels = getLabels(locale);
+export function statusDisplay(status: string, labels: ReportLabels) {
   const tone: BadgeTone =
     status === 'passed'
       ? 'success'
@@ -13,7 +12,10 @@ export function statusDisplay(status: string, locale: TUnitReportLocale) {
         : status === 'inProgress'
           ? 'info'
           : 'neutral';
-  return { status: labels.statuses[status] ?? status, tone };
+  return {
+    status: Object.hasOwn(labels.statuses, status) ? labels.statuses[status] : status,
+    tone,
+  };
 }
 
 export function displayCounts(report: TUnitReport) {
@@ -40,15 +42,15 @@ export function displayCounts(report: TUnitReport) {
   return { byStatus, total: report.summary?.total ?? tests.length, passed, unsuccessful, flaky };
 }
 
-export function runDisplay(report: TUnitReport, locale: TUnitReportLocale) {
+export function runDisplay(report: TUnitReport, labels: ReportLabels) {
   const counts = displayCounts(report);
   for (const status of ['failed', 'error', 'timedOut', 'cancelled', 'inProgress'])
-    if (counts.byStatus.has(status)) return statusDisplay(status, locale);
-  if (counts.unsuccessful > 0) return statusDisplay('failed', locale);
+    if (counts.byStatus.has(status)) return statusDisplay(status, labels);
+  if (counts.unsuccessful > 0) return statusDisplay('failed', labels);
   if (
     counts.total === 0 ||
     [...counts.byStatus.keys()].some((status) => !['passed', 'skipped'].includes(status))
   )
-    return statusDisplay('unknown', locale);
-  return statusDisplay(counts.passed > 0 ? 'passed' : 'skipped', locale);
+    return statusDisplay('unknown', labels);
+  return statusDisplay(counts.passed > 0 ? 'passed' : 'skipped', labels);
 }

@@ -1,0 +1,127 @@
+{
+  "numFailedTests": 1,
+  "numFailedTestSuites": 2,
+  "numPassedTests": 2,
+  "numPassedTestSuites": 1,
+  "numPendingTests": 1,
+  "numPendingTestSuites": 0,
+  "numTodoTests": 1,
+  "numTotalTests": 6,
+  "numTotalTestSuites": 3,
+  "startTime": 1700000000000,
+  "success": false,
+  "testResults": [
+    {
+      "name": "example.test.ts",
+      "status": "failed",
+      "message": "",
+      "startTime": 1700000000000,
+      "endTime": 1700000000020,
+      "assertionResults": [
+        {
+          "ancestorTitles": [
+            "Examples"
+          ],
+          "fullName": "Examples duplicate name",
+          "title": "duplicate name",
+          "status": "passed",
+          "duration": 0,
+          "failureMessages": [],
+          "meta": {},
+          "tags": [],
+          "benchmarks": []
+        },
+        {
+          "ancestorTitles": [
+            "Examples"
+          ],
+          "fullName": "Examples escaped failure",
+          "title": "escaped failure",
+          "status": "failed",
+          "duration": 12.5,
+          "failureMessages": [
+            "Expected <script> to remain plain text."
+          ],
+          "meta": {
+            "case": "source metadata"
+          },
+          "tags": [],
+          "benchmarks": []
+        },
+        {
+          "ancestorTitles": [
+            "Examples"
+          ],
+          "fullName": "Examples skipped case",
+          "title": "skipped case",
+          "status": "skipped",
+          "duration": null,
+          "failureMessages": [],
+          "meta": {},
+          "tags": [],
+          "benchmarks": []
+        }
+      ]
+    },
+    {
+      "name": "example.test.ts",
+      "status": "passed",
+      "message": "",
+      "startTime": 1700000000000,
+      "endTime": 1700000000020,
+      "assertionResults": [
+        {
+          "ancestorTitles": [
+            "Examples"
+          ],
+          "fullName": "Examples duplicate name",
+          "title": "duplicate name",
+          "status": "passed",
+          "duration": 0,
+          "failureMessages": [],
+          "meta": {},
+          "tags": [],
+          "benchmarks": []
+        },
+        {
+          "ancestorTitles": [
+            "Examples"
+          ],
+          "fullName": "Examples future test",
+          "title": "future test",
+          "status": "todo",
+          "duration": null,
+          "failureMessages": [],
+          "meta": {},
+          "tags": [],
+          "benchmarks": []
+        },
+        {
+          "ancestorTitles": [
+            "Examples"
+          ],
+          "fullName": "Examples unknown outcome",
+          "title": "unknown outcome",
+          "status": "vendorOutcome",
+          "duration": null,
+          "failureMessages": [],
+          "meta": {},
+          "tags": [],
+          "benchmarks": [],
+          "extension": {
+            "artifact": "retained.mp4"
+          }
+        }
+      ]
+    },
+    {
+      "name": "collection-error.test.ts",
+      "status": "failed",
+      "message": "Cannot import missing-module",
+      "startTime": 1700000000000,
+      "endTime": 1700000000020,
+      "assertionResults": []
+    }
+  ],
+  "snapshot": {}
+}

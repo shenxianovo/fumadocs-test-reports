@@ -1,0 +1,68 @@
+{
+  "repository": "https://github.com/fuma-nama/fumadocs",
+  "commit": "3cecdb594e36d6e67e5a7e493f1ba35f157dc8de",
+  "upstreamPath": "/Users/bytedance/Code/Personal/fumadocs-upstream",
+  "nodeVersion": "v26.7.0",
+  "pnpmVersion": "12.8.1",
+  "vitestVersion": "5.0.3",
+  "uiVersion": "5.0.3",
+  "reporter": "vitest built-in json and official @vitest/ui HTML reporter",
+  "scope": {
+    "config": "vitest.config.ts",
+    "projects": [
+      "packages/*"
+    ],
+    "filters": [],
+    "description": "Full upstream test run."
+  },
+  "commands": {
+    "test": {
+      "command": "pnpm exec vitest run --config=/var/folders/ns/7njj05zs4x70mm21q4fdznbw0000gn/T/fumadocs-vitest-cVVuHa/export.config.mts",
+      "exitCode": 0,
+      "configOverlay": {
+        "upstreamConfig": "vitest.config.ts",
+        "reporters": [
+          "default",
+          [
+            "json",
+            {
+              "outputFile": "/var/folders/ns/7njj05zs4x70mm21q4fdznbw0000gn/T/fumadocs-vitest-cVVuHa/fumadocs.json"
+            }
+          ],
+          [
+            "/Users/bytedance/Code/Personal/fumadocs-test-reports/node_modules/.pnpm/@vitest+ui@5.0.3_vitest@5.0.3/node_modules/@vitest/ui/dist/reporter.js",
+            {
+              "outputDir": "/var/folders/ns/7njj05zs4x70mm21q4fdznbw0000gn/T/fumadocs-vitest-cVVuHa/html",
+              "singleFile": true
+            }
+          ]
+        ]
+      }
+    }
+  },
+  "generatedAt": "2026-10-07T01:36:37.429Z",
+  "startedAt": "2026-10-07T01:36:33.321Z",
+  "report": {
+    "file": "fumadocs.json",
+    "bytes": 182109,
+    "sha256": "3b5aa1b870cba381e7c4e4c2bde220b329dc614ee4b5e7be4f5d55ecb1554913",
+    "testFiles": 87,
+    "testSuites": 166,
+    "tests": 656,
+    "passed": 656,
+    "failed": 0,
+    "pending": 0,
+    "todo": 0,
+    "success": true,
+    "rewritten": false
+  },
+  "htmlReport": {
+    "file": "apps/docs/public/reports/vitest-report.html",
+    "bytes": 1158381,
+    "sha256": "0a2b77a78aafbe5f6735f0c26c5df30bf8f1a862a74695220aada3a694489b4c",
+    "sameRunAsJson": true,
+    "singleFile": true,
+    "rewritten": false
+  },
+  "upstreamTrackedChangesAtCompletion": []
+}

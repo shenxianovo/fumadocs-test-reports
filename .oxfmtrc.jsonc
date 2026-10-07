@@ -7,7 +7,7 @@
     "**/next-env.d.ts",
     "pnpm-lock.yaml",
     "**/fixtures/**",
-    "examples/docs/public/reports/**",
+    "apps/docs/public/reports/**",
     "**/dist/**",
     "**/.next/**",
     "**/.source/**",

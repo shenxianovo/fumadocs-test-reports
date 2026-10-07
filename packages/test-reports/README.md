@@ -1,6 +1,6 @@
 # fumadocs-test-reports
 
-Framework-native test report presenters and shared React UI primitives for Fumadocs.
+A test report integration for Fumadocs. Use framework presenters to display native reports in your documentation. Use shared UI primitives to build other report views.
 
 ## Quick start
 
@@ -21,9 +21,15 @@ Install the package in your Fumadocs application:
 pnpm add fumadocs-test-reports
 ```
 
-React 19.2+ and Fumadocs UI 16.16.2+ are peer dependencies. The parser entry does not import React or Fumadocs UI.
+Use these peer dependencies:
 
-Import the stylesheet after your Fumadocs styles:
+- React 19.2 or later.
+- Fumadocs Core 16.16.2 or later.
+- Fumadocs UI 16.16.2 or later.
+
+The parser entry points do not import React or Fumadocs UI.
+
+Import the stylesheet after the Fumadocs styles:
 
 ```css
 @import 'fumadocs-test-reports/css/preset.css';
@@ -31,42 +37,195 @@ Import the stylesheet after your Fumadocs styles:
 
 ## Architecture
 
-During 0.x development, changes replace the current API and data model directly. Deprecated APIs and version-dependent compatibility branches are not retained.
+During 0.x development, changes replace the current API and native report models directly. The package does not keep deprecated APIs or compatibility branches for earlier versions.
 
 ```text
-TUnit JSON → parse → TUnit native fields → TUnit presenter → shared UI primitives
+TUnit JSON → parser → native report model → framework presenter → shared UI primitives
 ```
 
-Each framework owns its parser, native types and presenter. Shared UI primitives accept display props, such as text, a visual tone or a duration. Future presenters can combine these primitives with their framework-specific traces, steps or artifacts.
+Each report format has its own parser, native report model, and framework presenter. Shared UI primitives receive display props, such as text, tone, or duration. Framework presenters can add traces, steps, or artifacts from their native reports.
 
-Public entries:
+| Entry point       | Exports                                                                  |
+| ----------------- | ------------------------------------------------------------------------ |
+| `/tunit`          | `parseTUnitReport`, `TUnitParseError`, and native `TUnit*` types.        |
+| `/tunit/ui`       | `TUnitReport` and `TUnitReportLink`.                                     |
+| `/vitest`         | `parseVitestReport`, `VitestParseError`, and native `VitestJson*` types. |
+| `/vitest/ui`      | `VitestReport`, `VitestReportLink`, and display selection types.         |
+| `/i18n`           | `testReportTranslations()`, `zhCN()`, and translation key types.         |
+| `/ui`             | `StatusBadge`, `Duration`, `ErrorDetail`, and `StdoutPanel`.             |
+| `/css/preset.css` | Report layout and status styles that use Fumadocs theme variables.       |
 
-- `/tunit`: `parseTUnitReport`, `TUnitParseError` and native `TUnit*` types.
-- `/tunit/ui`: `TUnitReport` and `TUnitReportLink`.
-- `/ui`: `StatusBadge`, `Duration`, `ErrorDetail` and `StdoutPanel`.
-- `/css/preset.css`: report-specific layout and status styles using Fumadocs theme variables.
+## TUnit native report model
 
-## Native TUnit data
+`parseTUnitReport` accepts decoded `.tunit-report.json` data with schema version 1. The parser checks the fields that the framework presenter uses. It then returns the same input object.
 
-`parseTUnitReport` accepts decoded `.tunit-report.json` sidecar JSON, schema version 1. It validates the fields consumed by the presenter, then returns the input object unchanged. The caller owns file reads, network requests and routing.
+The caller reads files, sends network requests, and controls routes.
 
-Names and values remain native: `assemblyName`, `groups[].tests`, `displayName`, `output`, `errorOutput`, `exception.innerException`, `retryAttempt`, `spanId` and `parentSpanId`. Unknown fields, arbitrary status strings and explicit null values remain present. The parser adds no fields, defaults or status mappings.
+The parser keeps native field names and values. These include `assemblyName`, `groups[].tests`, `displayName`, `output`, `errorOutput`, `exception.innerException`, `retryAttempt`, `spanId`, and `parentSpanId`.
 
-The minimum shape contains `schemaVersion`, `assemblyName`, `groups` and each group's `className` and `tests`. A test requires `id`, `displayName` and `status`. Metadata and optional payloads are checked when supplied. Invalid known fields, duplicate test IDs or unsupported schema versions throw `TUnitParseError`; its `path` identifies the JSON field.
+Unknown fields, custom status strings, and explicit null values remain in the native report. The parser does not add fields, default values, or status mappings.
 
-The presenter reads TUnit's supplied `summary` counters. For minimal reports without these counters, it derives display counts from the native tests. Retries remain attempt history within a test. Timestamp text is displayed as supplied, and duration values are milliseconds.
+The native report must contain these fields:
 
-`TUnitReport` provides search, native outcome filters, details, output, retry attempts and a TUnit trace timeline. `selectedTestId` and `onTestSelect` let the host implement permalinks. `TUnitReportLink` embeds a link to the same native report in a document.
+- At the root: `schemaVersion`, `assemblyName`, and `groups`.
+- In each group: `className` and `tests`.
+- In each test: `id`, `displayName`, and `status`.
 
-The presenter reuses Fumadocs Tabs, Accordion, Card, CodeBlock, Callout and button variants. Custom styles cover the test list, metrics, status badges and trace bars. Native components provide tab keyboard navigation, disclosure controls and code-copy buttons.
+The parser also checks metadata and optional data when present. Invalid known fields, duplicate test IDs, or unsupported schema versions cause a `TUnitParseError`. The error's `path` identifies the JSON field.
 
-Report layout uses container queries: test columns and metrics adapt to the report's available width, including space consumed by a host sidebar or table of contents. Match your Fumadocs layout with its corresponding page components. Spacious and Glass also require their layout styles, imported as `fumadocs-ui/css/generated/spacious.css` or `fumadocs-ui/css/generated/glass.css`.
+The framework presenter reads the supplied TUnit `summary` counts. If the native report has no summary, the framework presenter calculates display counts from the tests.
 
-Use the host's `<DocsPage full>` for a dedicated report page. Spacious's native page width is 760 px by default; `full` sets the limit to 1200 px, while the report adapts to the available space inside it.
+Retry attempts remain part of a test's attempt history. The framework presenter keeps timestamp text unchanged. Duration values are in milliseconds.
 
-Flux in `@fumadocs/base-ui@16.16.2` has a page-container width issue: its centred outer layout can shrink the page when content uses inline-size containment. The workspace example applies a dependency patch that adds `w-full` to Flux's native `main`; it keeps the native page limits and alignment. This patch is not included in the published report package. A host using this affected Flux version needs the same dependency fix. Other demonstrated layouts use their native page configuration directly.
+### TUnit framework presenter
 
-Both support `locale="en"` (default) and `locale="zh"`. Fumadocs layouts and Next.js routing belong to the host application.
+`TUnitReport` shows search, outcome filters, inline details, output, retry attempts, and a trace timeline. Each row uses Fumadocs Accordion. Details open below the row and use the full list width.
+
+Groups start closed. Each group heading shows the number of visible test rows. Use Expand all or Collapse all to control the groups.
+
+Search and outcome filters open matching groups. A selected test link opens its group. Closing a group keeps the test selection. Outcome filters and group actions share one toolbar. The controls can wrap at narrow widths.
+
+A group shows Passed only when all its tests passed. Vitest files must also have a passing file outcome and no collection error. This label uses the complete group, before search or outcome filters apply.
+
+Both framework presenters use native Fumadocs Accordion for groups and test rows. Test names use the host's font size and family.
+
+Only one test can be open at a time. Test details start closed unless the host supplies a selected test. The report uses document scroll, with no separate list or detail scroll boxes.
+
+`TUnitReportLink` adds a link to the native report in a document.
+
+### Headers and selection
+
+Set `showHeader={false}` if the host already displays a page title. Both framework presenters use colors from the host's Fumadocs theme variables.
+
+Use `selectedTestId` and `onTestSelect` to control selection and report links.
+
+| Prop value or event   | Behavior                                                      |
+| --------------------- | ------------------------------------------------------------- |
+| Omit `selectedTestId` | The framework presenter controls local selection.             |
+| Supply a string       | The host selects that test.                                   |
+| Supply `null`         | The host closes all rows.                                     |
+| Open a row            | `onTestSelect` receives the native test or display selection. |
+| Close a row           | `onTestSelect` receives `undefined`.                          |
+
+Search and outcome filters can hide the open row. They do not select a different row. Clear the search or filter to show the selected row again.
+
+```tsx
+<TUnitReport
+  report={report}
+  showHeader={false}
+  selectedTestId={searchParams.get('test')}
+  onTestSelect={(test) => {
+    const params = new URLSearchParams(searchParams);
+    if (test) params.set('test', test.id);
+    else params.delete('test');
+    // The host updates its URL with params, preserving scroll position.
+  }}
+/>
+```
+
+### Fumadocs controls and layout
+
+Framework presenters use Fumadocs Tabs, Accordion, Card, CodeBlock, Callout, and button variants. These controls supply keyboard navigation, row expansion, and code-copy buttons.
+
+Report styles control test rows, counts, status badges, and trace bars. Container queries adjust rows and counts to the available report width. The host sidebar and table of contents can reduce this width.
+
+Use page components that match the Fumadocs layout. Import the required layout styles for Spacious and Glass:
+
+- `fumadocs-ui/css/generated/spacious.css`.
+- `fumadocs-ui/css/generated/glass.css`.
+
+Use `<DocsPage full>` for a separate report page. Spacious has a default page width limit of 760 px. The `full` prop changes this limit to 1200 px. The framework presenter uses the space available inside the page.
+
+Flux in `@fumadocs/base-ui@16.16.2` can make the page too narrow when a child uses inline-size containment. The documentation app applies a dependency patch that adds `w-full` to the native Flux `main`.
+
+The patch keeps native page limits and alignment. The published test report integration does not include this patch. Hosts that use the affected Flux version need the same dependency fix. Other layout examples use their native page configuration.
+
+## Vitest native report model
+
+Export a native report with the official Vitest JSON reporter:
+
+```sh
+vitest run --reporter=default --reporter=json --outputFile.json=./vitest-report.json
+```
+
+Read the native report and display it:
+
+```tsx
+import { parseVitestReport } from 'fumadocs-test-reports/vitest';
+import { VitestReport, VitestReportLink } from 'fumadocs-test-reports/vitest/ui';
+import input from './vitest-report.json';
+
+const report = parseVitestReport(input);
+<VitestReport report={report} title="My tests" />;
+<VitestReportLink report={report} href="/docs/reports/run" title="My tests" />;
+```
+
+The supported version is Vitest 5.0.3. The complete Fumadocs test run supplies the verification data.
+
+The native report has no schema version field. Verify other producer versions with real exports before you add support. Public types describe the fields that the framework presenter uses. The types do not depend on the Vitest runtime package.
+
+The parser keeps other source fields at their original paths. These fields can include snapshot, coverage, and benchmark data.
+
+`parseVitestReport` accepts decoded JSON and returns the same input object. It checks the required structure, counts, and fields used for display.
+
+Optional fields can be absent if the native report model permits this. Invalid supplied values cause a `VitestParseError` with a field path. Unknown fields and outcome strings remain unchanged.
+
+Summary counts can differ from the visible details. A native report can contain only some test details.
+
+### Vitest framework presenter
+
+The framework presenter shows files, test ancestry, outcomes, durations, failure messages, source locations, tags, and supplied metadata. It also shows file collection errors when the file has no test assertions.
+
+`numTotalTestSuites` includes nested suites. Use `testResults.length` for the file count. The framework presenter does not use root `numPendingTests` as a skipped-test count.
+
+The Vitest JSON reporter does not export standard output, standard error, attempt history, or traces. These features need a different native report format.
+
+The `success` field gives the reporter's result. It does not replace the process exit code. The fixture's separate provenance file records that exit code.
+
+### Vitest selection
+
+The native report has no unique test IDs. The framework presenter uses positions to identify rows within one export:
+
+- `0:2` identifies file index 0 and assertion index 2.
+- `0:file` identifies a collection error in file index 0.
+
+These display identifiers permit selection of tests with duplicate names. The framework presenter does not add the identifiers to the native report. Identifiers can change between test runs.
+
+When a row opens, `onTestSelect` receives the identifier and references to the native file and optional assertion. When the row closes, the callback receives `undefined`.
+
+The inline Accordion layout, header prop, and selection props use the same rules as `TUnitReport`.
+
+## Internationalization
+
+Framework presenters read the same translation provider as Fumadocs UI. Register the test report integration's translation extension. Add the supplied Simplified Chinese preset if needed:
+
+```tsx
+import { defineI18n } from 'fumadocs-core/i18n';
+import { uiTranslations, i18nProvider } from 'fumadocs-ui/i18n';
+import { RootProvider } from 'fumadocs-ui/provider/next';
+import { testReportTranslations, zhCN } from 'fumadocs-test-reports/i18n';
+
+const i18n = defineI18n({ defaultLanguage: 'en', languages: ['en', 'zh'] });
+const translations = i18n
+  .translations()
+  .extend(uiTranslations())
+  .extend(testReportTranslations())
+  .preset('zh', zhCN())
+  .add({ zh: { 'Passed(test reports)': '通过' } });
+
+<RootProvider i18n={i18nProvider(translations, lang)}>
+  <TUnitReport report={tunitReport} />
+  <VitestReport report={vitestReport} />
+</RootProvider>;
+```
+
+The host selects locale codes. It can add languages and change labels. If the host supplies no translations, UI labels use English.
+
+Both framework presenters use this provider. During 0.x development, the package removed the old `locale` prop and `TUnitReportLocale` export.
+
+Translations apply to UI labels and known outcome labels. Native test names, exception messages, output, and metadata remain unchanged.
+
+The host controls Fumadocs layouts, Fumadocs UI translations, and application routes. See [Fumadocs translations](https://www.fumadocs.dev/docs/ui/translations).
 
 ## Shared UI primitives
 
@@ -79,11 +238,19 @@ import { StatusBadge, Duration, ErrorDetail, StdoutPanel } from 'fumadocs-test-r
 <StdoutPanel content="Connection refused" title="Standard error" />;
 ```
 
-`StatusBadge` displays the caller's text with a visual tone. The presenter decides what a native status means. `Duration` treats a missing or null value as unknown and displays a recorded zero as zero. Error and output components render plain, escaped text; the presenter owns exception nesting and retry semantics.
+`StatusBadge` displays the caller's text with a tone. The framework presenter interprets the native status.
 
-This version implements TUnit. Additional frameworks will have their own native parsers and presenters. Dashboard, history and cross-framework search are future features.
+`Duration` shows an unknown duration for a missing or null value. It shows a recorded zero as zero.
 
-References: [TUnit's native report model](https://github.com/thomhurst/TUnit/blob/main/src/TUnit.Engine/Reporters/Html/HtmlReportDataModel.cs), [its sidecar writer](https://github.com/thomhurst/TUnit/blob/main/src/TUnit.Engine/Reporters/Aggregation/ReportDataJson.cs), and [Fumadocs OpenAPI's package layout](https://github.com/fuma-nama/fumadocs/tree/dev/packages/openapi).
+`ErrorDetail` and `StdoutPanel` display escaped text. The framework presenter controls nested exceptions and interprets retry attempts.
+
+This version supports TUnit and Vitest JSON. Other native report formats will have their own parsers and framework presenters. Dashboard, history, and search across frameworks are future features.
+
+See these source references:
+
+- [TUnit native report model](https://github.com/thomhurst/TUnit/blob/main/src/TUnit.Engine/Reporters/Html/HtmlReportDataModel.cs).
+- [TUnit sidecar writer](https://github.com/thomhurst/TUnit/blob/main/src/TUnit.Engine/Reporters/Aggregation/ReportDataJson.cs).
+- [Fumadocs OpenAPI package structure](https://github.com/fuma-nama/fumadocs/tree/dev/packages/openapi).
 
 ## Local release
 
@@ -97,18 +264,18 @@ pnpm lint
 pnpm lint:format
 ```
 
-Review the public package from `packages/test-reports`:
+From `packages/test-reports`, examine the files for publication:
 
 ```sh
-npm publish --dry-run --ignore-scripts
+npm pack --dry-run --ignore-scripts
 ```
 
-`pnpm pack` rebuilds the package through `prepack`. Published files are limited to `dist`, `css`, the package README, license and manifest. Example reports and test fixtures stay in the repository.
+`pnpm pack` builds the package through `prepack`. The published package contains `dist`, `css`, the package README, license, and manifest. Native report examples and test fixtures stay in the repository.
 
-After logging in to npm, publish from `packages/test-reports`:
+Log in to npm. Then publish from `packages/test-reports`:
 
 ```sh
 pnpm publish --access public --no-git-checks
 ```
 
-The manifest specifies the public npm registry. Publishing requires npm account access and any authentication challenge configured for that account.
+The manifest specifies the public npm registry. Publication requires npm account access and the account's authentication checks.

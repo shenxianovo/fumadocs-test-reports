@@ -17,6 +17,30 @@ function run(status = 'passed', extra: Record<string, unknown> = {}): TUnitRepor
 }
 
 describe('TUnit presenter', () => {
+  it.each([
+    ['passed', true],
+    ['failed', false],
+    ['skipped', false],
+    ['vendorOutcome', false],
+  ])('marks a group Passed only when every test passed (%s)', (status, passed) => {
+    const report = run();
+    report.groups[0].tests.push({ id: 'b', displayName: 'Second test', status });
+    const html = renderToStaticMarkup(createElement(TUnitReport, { report }));
+    const heading = html.match(/<button[^>]*class="[^"]*ftr-group"[^>]*>(.*?)<\/button>/s)?.[1];
+    expect(heading).toBeDefined();
+    expect(heading?.includes('ftr-tone-success')).toBe(passed);
+  });
+
+  it('starts collapsed and opens only an explicit selection', () => {
+    const report = run('failed', { exception: { message: 'Native exception detail' } });
+    const closed = renderToStaticMarkup(createElement(TUnitReport, { report }));
+    expect(closed).toContain('aria-expanded="false"');
+    expect(closed).not.toContain('Native exception detail');
+    const open = renderToStaticMarkup(createElement(TUnitReport, { report, selectedTestId: 'a' }));
+    expect(open).toContain('aria-expanded="true"');
+    expect(open).toContain('Native exception detail');
+  });
+
   it.each(['failed', 'error', 'timedOut', 'cancelled', 'inProgress', 'vendorOutcome'])(
     'does not label %s as a passing run',
     (status) => {
@@ -61,6 +85,7 @@ describe('TUnit presenter', () => {
   it('escapes report-controlled text, including exception messages', () => {
     const html = renderToStaticMarkup(
       createElement(TUnitReport, {
+        selectedTestId: 'a',
         report: run('failed', {
           displayName: '<script>alert(1)</script>',
           exception: { message: '<img src=x onerror=alert(1)>' },
@@ -78,6 +103,7 @@ describe('TUnit presenter', () => {
     expect(normal).not.toContain('>Attempts</button>');
     const retried = renderToStaticMarkup(
       createElement(TUnitReport, {
+        selectedTestId: 'a',
         report: run('passed', { attempts: [{ status: 'passed', durationMs: 2 }] }),
       }),
     );
