@@ -8,17 +8,27 @@ import {
   AccordionTrigger,
   AccordionContent,
 } from 'fumadocs-ui/components/ui/accordion';
-import { buttonVariants } from 'fumadocs-ui/components/ui/button';
 import { useReportLabels } from '../i18n/labels';
+import type { BadgeTone } from './primitives';
+
+export interface StatusFilterOption {
+  /** Native status value; null means every status. */
+  value: string | null;
+  label: string;
+  count: number;
+  tone?: BadgeTone;
+}
 
 /** Display props only. Framework presenters supply grouping and selection meaning. */
 export function ReportGroups({
   items,
-  searchKey,
-  filtered,
+  query,
+  onQueryChange,
+  filters,
+  filter,
+  onFilterChange,
   selectedGroup,
   selectionKey,
-  filters,
   empty,
 }: {
   items: {
@@ -26,18 +36,22 @@ export function ReportGroups({
     title: string;
     name: ReactNode;
     caption?: ReactNode;
-    badge?: ReactNode;
+    status?: ReactNode;
     count: number;
     children: ReactNode;
   }[];
-  searchKey: string;
-  filtered: boolean;
+  query: string;
+  onQueryChange: (query: string) => void;
+  filters: StatusFilterOption[];
+  filter: string | null;
+  onFilterChange: (filter: string | null) => void;
   selectedGroup?: string;
   selectionKey?: string;
-  filters: ReactNode;
   empty: ReactNode;
 }) {
   const labels = useReportLabels();
+  const searchKey = JSON.stringify([query, filter]);
+  const filtered = !!query || filter !== null;
   const initial = () =>
     filtered ? items.map((item) => item.id) : selectedGroup ? [selectedGroup] : [];
   const [state, setState] = useState(() => ({ searchKey, selectionKey, expanded: initial() }));
@@ -61,38 +75,76 @@ export function ReportGroups({
   }
   return (
     <div className="ftr-list">
-      <div className="ftr-result-controls">
-        {filters}
-        <div className="ftr-group-actions">
+      <div className="ftr-toolbar" role="toolbar" aria-label={labels.results}>
+        <div className="ftr-filters" role="group" aria-label={labels.status}>
+          {filters.map((option) => (
+            <button
+              type="button"
+              key={option.value ?? ''}
+              className="ftr-filter"
+              aria-pressed={filter === option.value}
+              onClick={() => onFilterChange(option.value)}
+            >
+              {option.tone && <span className="ftr-dot" data-tone={option.tone} />}
+              {option.label}
+              <small>{option.count}</small>
+            </button>
+          ))}
+        </div>
+        <div className="ftr-toolbar-end">
+          <label className="ftr-search">
+            <svg viewBox="0 0 16 16" aria-hidden="true">
+              <circle cx="7" cy="7" r="4.25" />
+              <path d="m10.25 10.25 3 3" />
+            </svg>
+            <input
+              type="search"
+              aria-label={labels.search}
+              placeholder={labels.search}
+              value={query}
+              onChange={(event) => onQueryChange(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === 'Escape') onQueryChange('');
+              }}
+            />
+          </label>
           <button
             type="button"
-            className={buttonVariants({ variant: 'ghost', size: 'sm' })}
+            className="ftr-icon-button"
+            aria-label={labels.expandAll}
+            title={labels.expandAll}
             onClick={() => change(items.map((item) => item.id))}
             disabled={!items.length}
           >
-            {labels.expandAll}
+            <svg viewBox="0 0 16 16" aria-hidden="true">
+              <path d="m5 6 3-3 3 3M5 10l3 3 3-3" />
+            </svg>
           </button>
           <button
             type="button"
-            className={buttonVariants({ variant: 'ghost', size: 'sm' })}
+            className="ftr-icon-button"
+            aria-label={labels.collapseAll}
+            title={labels.collapseAll}
             onClick={() => change([])}
             disabled={!items.length}
           >
-            {labels.collapseAll}
+            <svg viewBox="0 0 16 16" aria-hidden="true">
+              <path d="m5 3 3 3 3-3M5 13l3-3 3 3" />
+            </svg>
           </button>
         </div>
       </div>
       {items.length ? (
-        <Accordion multiple value={expanded} onValueChange={change}>
+        <Accordion className="ftr-groups" multiple value={expanded} onValueChange={change}>
           {items.map((item) => (
             <AccordionItem key={item.id} value={item.id} className="ftr-test-group">
-              <AccordionHeader>
+              <AccordionHeader className="ftr-group-header">
                 <AccordionTrigger className="ftr-group" title={item.title}>
+                  {item.status}
                   <span className="ftr-group-name">
                     {item.name}
                     {item.caption && <small>{item.caption}</small>}
                   </span>
-                  {item.badge}
                   <small className="ftr-group-count">{item.count}</small>
                 </AccordionTrigger>
               </AccordionHeader>
@@ -101,7 +153,7 @@ export function ReportGroups({
           ))}
         </Accordion>
       ) : (
-        empty
+        <div className="ftr-groups ftr-groups-empty">{empty}</div>
       )}
     </div>
   );

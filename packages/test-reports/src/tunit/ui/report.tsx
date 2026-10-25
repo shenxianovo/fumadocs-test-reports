@@ -1,15 +1,14 @@
 'use client';
 
 import { useState } from 'react';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from 'fumadocs-ui/components/tabs';
 import { Accordion } from 'fumadocs-ui/components/ui/accordion';
-import { TestDisclosure } from '../../ui/test-disclosure';
+import { TestDisclosure, DetailTabs, Fields } from '../../ui/test-disclosure';
 import { ReportGroups } from '../../ui/report-groups';
-import { buttonVariants } from 'fumadocs-ui/components/ui/button';
+import { RunSummary } from '../../ui/run-summary';
 import type { TUnitReport as TUnitReportData, TUnitTestResult, TUnitException } from '../types';
-import { StatusBadge, Duration, ErrorDetail, StdoutPanel } from '../../ui';
+import { StatusIcon, Duration, ErrorDetail, StdoutPanel } from '../../ui';
 import { useLabels } from './labels';
-import { displayCounts, statusDisplay } from './presentation';
+import { displayCounts, groupDisplay, statusDisplay } from './presentation';
 import { TUnitTraceTimeline } from './trace-timeline';
 
 export interface TUnitReportProps {
@@ -45,7 +44,10 @@ export function TUnitReport({
     .map((group, index) => ({
       ...group,
       groupId: String(index),
-      passed: group.tests.length > 0 && group.tests.every((test) => test.status === 'passed'),
+      mark: groupDisplay(
+        group.tests.map((test) => test.status),
+        labels,
+      ),
       tests: group.tests.filter(
         (test) =>
           (filter === null || test.status === filter) &&
@@ -59,6 +61,11 @@ export function TUnitReport({
   const selected = visible.find(
     (test) => test.id === (selectedTestId === undefined ? localSelection : selectedTestId),
   );
+  const statuses = [...summary.byStatus].map(([value, count]) => ({
+    value,
+    count,
+    ...statusDisplay(value, labels),
+  }));
 
   function select(id: string | undefined) {
     const test = visible.find((test) => test.id === id);
@@ -70,84 +77,56 @@ export function TUnitReport({
     <section className={`ftr-report not-prose ${className ?? ''}`} aria-label={report.assemblyName}>
       <header className="ftr-run-heading">
         {showHeader && <h2>{report.assemblyName}</h2>}
-        <div className="ftr-run-meta">
-          <span>TUnit {report.tunitVersion}</span>
-          {[report.machineName, report.operatingSystem, report.runtimeVersion]
+        <ul className="ftr-run-meta">
+          <li>TUnit {report.tunitVersion}</li>
+          {[report.machineName, report.operatingSystem, report.runtimeVersion, report.timestamp]
             .filter(Boolean)
             .map((value, i) => (
-              <span key={i}>{value}</span>
+              <li key={i}>{value}</li>
             ))}
-          {report.timestamp && <span>{report.timestamp}</span>}
-        </div>
+        </ul>
       </header>
-      <div className="ftr-metrics">
-        <div>
-          <span>{labels.total}</span>
-          <strong>{summary.total}</strong>
-        </div>
-        <div className="ftr-metric-success">
-          <span>{labels.passed}</span>
-          <strong>{summary.passed}</strong>
-          {!!summary.flaky && (
-            <small>
-              {labels.flaky}: {summary.flaky}
-            </small>
-          )}
-        </div>
-        <div className="ftr-metric-danger">
-          <span>{labels.unsuccessful}</span>
-          <strong>{summary.unsuccessful}</strong>
-        </div>
-        <div>
-          <span>{labels.duration}</span>
-          <strong>
-            <Duration value={report.totalDurationMs} unknownLabel={labels.unknown} />
-          </strong>
-        </div>
-      </div>
-      <div className="ftr-toolbar">
-        <h3>{labels.results}</h3>
-        <input
-          type="search"
-          aria-label={labels.search}
-          placeholder={labels.search}
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-        />
-      </div>
+      <RunSummary
+        metrics={[
+          { label: labels.total, value: summary.total },
+          {
+            label: labels.passed,
+            value: summary.passed,
+            tone: summary.passed ? 'success' : undefined,
+            note: summary.flaky ? `${labels.flaky} ${summary.flaky}` : undefined,
+          },
+          {
+            label: labels.unsuccessful,
+            value: summary.unsuccessful,
+            tone: summary.unsuccessful ? 'danger' : undefined,
+          },
+          {
+            label: labels.duration,
+            value: <Duration value={report.totalDurationMs} unknownLabel={labels.unknown} />,
+          },
+        ]}
+        segments={statuses.map((entry) => ({
+          key: entry.value,
+          label: entry.status,
+          count: entry.count,
+          tone: entry.tone,
+        }))}
+      />
       <ReportGroups
-        filters={
-          <div className="ftr-filters" aria-label={labels.results}>
-            <button
-              type="button"
-              className={buttonVariants({
-                variant: filter === null ? 'secondary' : 'ghost',
-                size: 'sm',
-              })}
-              aria-pressed={filter === null}
-              onClick={() => setFilter(null)}
-            >
-              {labels.all} <small>{summary.total}</small>
-            </button>
-            {[...summary.byStatus.keys()].map((status) => (
-              <button
-                type="button"
-                key={status}
-                className={buttonVariants({
-                  variant: filter === status ? 'secondary' : 'ghost',
-                  size: 'sm',
-                })}
-                aria-pressed={filter === status}
-                onClick={() => setFilter(status)}
-              >
-                {statusDisplay(status, labels).status} <small>{summary.byStatus.get(status)}</small>
-              </button>
-            ))}
-          </div>
-        }
+        query={query}
+        onQueryChange={setQuery}
+        filter={filter}
+        onFilterChange={setFilter}
+        filters={[
+          { value: null, label: labels.all, count: summary.total },
+          ...statuses.map((entry) => ({
+            value: entry.value,
+            label: entry.status,
+            count: entry.count,
+            tone: entry.tone,
+          })),
+        ]}
         empty={<p className="ftr-empty">{summary.total === 0 ? labels.noResults : labels.empty}</p>}
-        searchKey={JSON.stringify([query, filter])}
-        filtered={!!query || filter !== null}
         selectedGroup={
           groups.find((group) => group.tests.some((test) => test.id === selected?.id))?.groupId
         }
@@ -158,7 +137,7 @@ export function TUnitReport({
           name: <span className="ftr-mono">{group.className}</span>,
           caption: group.namespace && <span className="ftr-mono">{group.namespace}</span>,
           count: group.tests.length,
-          badge: group.passed ? <StatusBadge {...statusDisplay('passed', labels)} /> : undefined,
+          status: <StatusIcon {...group.mark} />,
           children: (
             <Accordion
               className="ftr-group-tests"
@@ -167,17 +146,27 @@ export function TUnitReport({
               }
               onValueChange={(value) => select(typeof value[0] === 'string' ? value[0] : undefined)}
             >
-              {group.tests.map((test) => (
-                <TestDisclosure
-                  key={test.id}
-                  value={test.id}
-                  badge={<StatusBadge {...statusDisplay(test.status, labels)} />}
-                  name={test.displayName}
-                  duration={<Duration value={test.durationMs} unknownLabel={labels.unknown} />}
-                >
-                  <TUnitTestDetails test={test} report={report} />
-                </TestDisclosure>
-              ))}
+              {group.tests.map((test) => {
+                const mark = statusDisplay(test.status, labels);
+                return (
+                  <TestDisclosure
+                    key={test.id}
+                    value={test.id}
+                    status={<StatusIcon {...mark} />}
+                    name={test.displayName}
+                    note={
+                      test.status !== 'passed'
+                        ? mark.status
+                        : test.retryAttempt
+                          ? labels.flaky
+                          : undefined
+                    }
+                    duration={<Duration value={test.durationMs} unknownLabel={labels.unknown} />}
+                  >
+                    <TUnitTestDetails test={test} report={report} />
+                  </TestDisclosure>
+                );
+              })}
             </Accordion>
           ),
         }))}
@@ -190,117 +179,102 @@ function TUnitTestDetails({ test, report }: { test: TUnitTestResult; report: TUn
   const labels = useLabels();
   const traceIds = new Set([test.traceId, ...(test.additionalTraceIds ?? [])]);
   const spans = report.spans?.filter((span) => traceIds.has(span.traceId)) ?? [];
-  const tabs = [
-    ['overview', labels.overview],
-    ['output', labels.output],
-    ...(test.attempts?.length ? [['attempts', labels.attempts]] : []),
-    ...(spans.length ? [['traces', labels.traces]] : []),
-  ];
+  const hasOutput = test.output != null || test.errorOutput != null;
   return (
-    <Tabs defaultValue="overview" className="ftr-detail-tabs">
-      <TabsList aria-label={labels.overview}>
-        {tabs.map(([value, label]) => (
-          <TabsTrigger key={value} value={value}>
-            {label}
-          </TabsTrigger>
-        ))}
-      </TabsList>
-      <TabsContent value="overview">
-        <dl className="ftr-fields">
-          <dt>ID</dt>
-          <dd className="ftr-mono">{test.id}</dd>
-          <dt>{labels.source}</dt>
-          <dd>{test.status}</dd>
-          {test.filePath && (
+    <DetailTabs
+      label={labels.overview}
+      tabs={[
+        {
+          value: 'overview',
+          label: labels.overview,
+          content: (
             <>
-              <dt>{labels.location}</dt>
-              <dd className="ftr-mono">
-                {test.filePath}
-                {test.lineNumber != null ? `:${test.lineNumber}` : ''}
-              </dd>
+              {test.exception && <TUnitExceptionDetails error={test.exception} />}
+              <Fields
+                items={[
+                  { label: labels.source, value: test.status, mono: true },
+                  {
+                    label: labels.location,
+                    value:
+                      test.filePath &&
+                      `${test.filePath}${test.lineNumber != null ? `:${test.lineNumber}` : ''}`,
+                    mono: true,
+                  },
+                  { label: labels.start, value: test.startTime || undefined },
+                  { label: labels.end, value: test.endTime || undefined },
+                  { label: labels.retries, value: test.retryAttempt },
+                  { label: labels.skipReason, value: test.skipReason || undefined },
+                  {
+                    label: labels.categories,
+                    value: test.categories?.length ? test.categories.join(', ') : undefined,
+                  },
+                  ...(test.customProperties ?? []).map((property) => ({
+                    label: property.key,
+                    value: property.value,
+                  })),
+                  { label: 'ID', value: test.id, mono: true },
+                ]}
+              />
             </>
-          )}
-          {test.startTime && (
-            <>
-              <dt>{labels.start}</dt>
-              <dd>{test.startTime}</dd>
-            </>
-          )}
-          {test.endTime && (
-            <>
-              <dt>{labels.end}</dt>
-              <dd>{test.endTime}</dd>
-            </>
-          )}
-          {test.retryAttempt != null && (
-            <>
-              <dt>{labels.retries}</dt>
-              <dd>{test.retryAttempt}</dd>
-            </>
-          )}
-          {test.skipReason && (
-            <>
-              <dt>{labels.skipReason}</dt>
-              <dd>{test.skipReason}</dd>
-            </>
-          )}
-          {!!test.categories?.length && (
-            <>
-              <dt>{labels.categories}</dt>
-              <dd>{test.categories.join(', ')}</dd>
-            </>
-          )}
-          {test.customProperties?.map((property, i) => (
-            <div className="ftr-field" key={i}>
-              <dt>{property.key}</dt>
-              <dd>{property.value}</dd>
+          ),
+        },
+        {
+          value: 'output',
+          label: labels.output,
+          content: (
+            <div className="ftr-output">
+              {!hasOutput && <StdoutPanel emptyLabel={labels.noOutput} />}
+              {test.output != null && <StdoutPanel content={test.output} title={labels.stdout} />}
+              {test.errorOutput != null && (
+                <StdoutPanel content={test.errorOutput} title={labels.stderr} />
+              )}
             </div>
-          ))}
-        </dl>
-        {test.exception && <TUnitExceptionDetails error={test.exception} />}
-      </TabsContent>
-      <TabsContent value="output">
-        <div className="ftr-output">
-          {test.output == null && test.errorOutput == null && (
-            <StdoutPanel emptyLabel={labels.noOutput} />
-          )}
-          {test.output != null && <StdoutPanel content={test.output} title={labels.stdout} />}
-          {test.errorOutput != null && (
-            <StdoutPanel content={test.errorOutput} title={labels.stderr} />
-          )}
-        </div>
-      </TabsContent>
-      {!!test.attempts?.length && (
-        <TabsContent value="attempts">
-          <div className="ftr-attempts">
-            {test.attempts?.map((attempt, i) => (
-              <div className="ftr-attempt" key={i}>
-                <h4>
-                  #{i + 1} <StatusBadge {...statusDisplay(attempt.status, labels)} />{' '}
-                  <Duration value={attempt.durationMs} unknownLabel={labels.unknown} />
-                </h4>
-                <p>
-                  {labels.source}: {attempt.status}
-                </p>
-                {(attempt.exceptionType != null ||
-                  attempt.exceptionMessage != null ||
-                  attempt.stackTrace != null) && (
-                  <ErrorDetail
-                    type={attempt.exceptionType}
-                    message={attempt.exceptionMessage}
-                    stack={attempt.stackTrace}
-                  />
-                )}
-              </div>
-            ))}
-          </div>
-        </TabsContent>
-      )}
-      {!!spans.length && (
-        <TabsContent value="traces">
-          <TUnitTraceTimeline spans={spans} />
-        </TabsContent>
-      )}
-    </Tabs>
+          ),
+        },
+        ...(test.attempts?.length
+          ? [
+              {
+                value: 'attempts',
+                label: labels.attempts,
+                content: (
+                  <ol className="ftr-attempts">
+                    {test.attempts.map((attempt, i) => {
+                      const mark = statusDisplay(attempt.status, labels);
+                      return (
+                        <li className="ftr-attempt" key={i}>
+                          <p className="ftr-attempt-heading">
+                            <span className="ftr-attempt-index">#{i + 1}</span>
+                            <StatusIcon {...mark} />
+                            <span>{mark.status}</span>
+                            <Duration value={attempt.durationMs} unknownLabel={labels.unknown} />
+                          </p>
+                          {(attempt.exceptionType != null ||
+                            attempt.exceptionMessage != null ||
+                            attempt.stackTrace != null) && (
+                            <ErrorDetail
+                              type={attempt.exceptionType}
+                              message={attempt.exceptionMessage}
+                              stack={attempt.stackTrace}
+                            />
+                          )}
+                        </li>
+                      );
+                    })}
+                  </ol>
+                ),
+              },
+            ]
+          : []),
+        ...(spans.length
+          ? [
+              {
+                value: 'traces',
+                label: labels.traces,
+                content: <TUnitTraceTimeline spans={spans} />,
+              },
+            ]
+          : []),
+      ]}
+    />
   );
 }

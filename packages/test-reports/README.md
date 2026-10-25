@@ -45,15 +45,15 @@ TUnit JSON → parser → native report model → framework presenter → shared
 
 Each report format has its own parser, native report model, and framework presenter. Shared UI primitives receive display props, such as text, tone, or duration. Framework presenters can add traces, steps, or artifacts from their native reports.
 
-| Entry point       | Exports                                                                  |
-| ----------------- | ------------------------------------------------------------------------ |
-| `/tunit`          | `parseTUnitReport`, `TUnitParseError`, and native `TUnit*` types.        |
-| `/tunit/ui`       | `TUnitReport` and `TUnitReportLink`.                                     |
-| `/vitest`         | `parseVitestReport`, `VitestParseError`, and native `VitestJson*` types. |
-| `/vitest/ui`      | `VitestReport`, `VitestReportLink`, and display selection types.         |
-| `/i18n`           | `testReportTranslations()`, `zhCN()`, and translation key types.         |
-| `/ui`             | `StatusBadge`, `Duration`, `ErrorDetail`, and `StdoutPanel`.             |
-| `/css/preset.css` | Report layout and status styles that use Fumadocs theme variables.       |
+| Entry point       | Exports                                                                    |
+| ----------------- | -------------------------------------------------------------------------- |
+| `/tunit`          | `parseTUnitReport`, `TUnitParseError`, and native `TUnit*` types.          |
+| `/tunit/ui`       | `TUnitReport` and `TUnitReportLink`.                                       |
+| `/vitest`         | `parseVitestReport`, `VitestParseError`, and native `VitestJson*` types.   |
+| `/vitest/ui`      | `VitestReport`, `VitestReportLink`, and display selection types.           |
+| `/i18n`           | `testReportTranslations()`, `zhCN()`, and translation key types.           |
+| `/ui`             | `StatusBadge`, `StatusIcon`, `Duration`, `ErrorDetail`, and `StdoutPanel`. |
+| `/css/preset.css` | Report layout and status styles that use Fumadocs theme variables.         |
 
 ## TUnit native report model
 
@@ -125,9 +125,9 @@ Search and outcome filters can hide the open row. They do not select a different
 
 ### Fumadocs controls and layout
 
-Framework presenters use Fumadocs Tabs, Accordion, Card, CodeBlock, Callout, and button variants. These controls supply keyboard navigation, row expansion, and code-copy buttons.
+Framework presenters use Fumadocs Tabs, Accordion, Card, and CodeBlock. These controls supply keyboard navigation, row expansion, and code-copy buttons.
 
-Report styles control test rows, counts, status badges, and trace bars. Container queries adjust rows and counts to the available report width. The host sidebar and table of contents can reduce this width.
+Report styles control the run summary, status filters, test rows, status marks, error panels, and the trace waterfall. Container queries adjust rows and counts to the available report width. The host sidebar and table of contents can reduce this width.
 
 Use page components that match the Fumadocs layout. Import the required layout styles for Spacious and Glass:
 
@@ -230,15 +230,22 @@ The host controls Fumadocs layouts, Fumadocs UI translations, and application ro
 ## Shared UI primitives
 
 ```tsx
-import { StatusBadge, Duration, ErrorDetail, StdoutPanel } from 'fumadocs-test-reports/ui';
+import {
+  StatusBadge,
+  StatusIcon,
+  Duration,
+  ErrorDetail,
+  StdoutPanel,
+} from 'fumadocs-test-reports/ui';
 
 <StatusBadge status="failed" tone="danger" />;
+<StatusIcon status="failed" tone="danger" />;
 <Duration value={42} />;
 <ErrorDetail message="Expected 400, received 200" stack="at example.test.ts:12" />;
 <StdoutPanel content="Connection refused" title="Standard error" />;
 ```
 
-`StatusBadge` displays the caller's text with a tone. The framework presenter interprets the native status.
+`StatusBadge` displays the caller's text with a tone. `StatusIcon` displays only the tone's mark and keeps the caller's text as its accessible label. The framework presenter interprets the native status.
 
 `Duration` shows an unknown duration for a missing or null value. It shows a recorded zero as zero.
 

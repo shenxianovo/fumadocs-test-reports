@@ -54,3 +54,18 @@ export function runDisplay(report: TUnitReport, labels: ReportLabels) {
     return statusDisplay('unknown', labels);
   return statusDisplay(counts.passed > 0 ? 'passed' : 'skipped', labels);
 }
+
+/** Group mark from its native outcomes; only an all-passed group gets the passing tone. */
+export function groupDisplay(statuses: string[], labels: ReportLabels) {
+  if (statuses.length && statuses.every((status) => status === 'passed'))
+    return statusDisplay('passed', labels);
+  const others = statuses
+    .filter((status) => status !== 'passed')
+    .map((status) => statusDisplay(status, labels));
+  return (
+    others.find((mark) => mark.tone === 'danger') ??
+    others.find((mark) => mark.tone === 'info') ??
+    others[0] ??
+    statusDisplay('unknown', labels)
+  );
+}

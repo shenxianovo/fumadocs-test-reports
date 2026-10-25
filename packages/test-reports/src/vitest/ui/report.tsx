@@ -1,15 +1,14 @@
 'use client';
 
 import { useState } from 'react';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from 'fumadocs-ui/components/tabs';
 import { Accordion } from 'fumadocs-ui/components/ui/accordion';
-import { TestDisclosure } from '../../ui/test-disclosure';
+import { TestDisclosure, DetailTabs, Fields } from '../../ui/test-disclosure';
 import { ReportGroups } from '../../ui/report-groups';
-import { buttonVariants } from 'fumadocs-ui/components/ui/button';
-import { StatusBadge, Duration, ErrorDetail, StdoutPanel } from '../../ui';
+import { RunSummary } from '../../ui/run-summary';
+import { StatusIcon, Duration, ErrorDetail, StdoutPanel } from '../../ui';
 import { useReportLabels } from '../../i18n/labels';
 import type { VitestJsonReport, VitestJsonTestFile, VitestJsonAssertionResult } from '../types';
-import { runDuration, statusDisplay } from './presentation';
+import { fileDisplay, runDuration, statusDisplay } from './presentation';
 
 /** Presentation selection within one export, never written into its native fields. */
 export interface VitestReportSelection {
@@ -45,16 +44,7 @@ export function VitestReport({
     }));
     if (file.message || (file.status === 'failed' && !rows.length))
       rows.unshift({ id: `${fileIndex}:file`, file });
-    return {
-      id: String(fileIndex),
-      file,
-      rows,
-      passed:
-        file.status === 'passed' &&
-        !file.message &&
-        file.assertionResults.length > 0 &&
-        file.assertionResults.every((test) => test.status === 'passed'),
-    };
+    return { id: String(fileIndex), file, rows, mark: fileDisplay(file, labels) };
   });
   const all = files.flatMap((file) => file.rows);
   const byStatus = new Map<string, number>();
@@ -62,6 +52,11 @@ export function VitestReport({
     const status = row.assertion?.status ?? row.file.status;
     byStatus.set(status, (byStatus.get(status) ?? 0) + 1);
   }
+  const statuses = [...byStatus].map(([value, count]) => ({
+    value,
+    count,
+    ...statusDisplay(value, labels),
+  }));
   const groups = files
     .map((group) => ({
       ...group,
@@ -91,112 +86,98 @@ export function VitestReport({
           <h2>{title}</h2>
         </header>
       )}
-      <div className="ftr-metrics">
-        <div>
-          <span>{labels.total}</span>
-          <strong>{report.numTotalTests}</strong>
-        </div>
-        <div className="ftr-metric-success">
-          <span>{labels.passed}</span>
-          <strong>{report.numPassedTests}</strong>
-        </div>
-        <div className="ftr-metric-danger">
-          <span>{labels.statuses.failed}</span>
-          <strong>{report.numFailedTests}</strong>
-        </div>
-        <div>
-          <span>{labels.files}</span>
-          <strong>{report.testResults.length}</strong>
-          <small>
-            <Duration value={runDuration(report)} unknownLabel={labels.unknown} />
-          </small>
-        </div>
-      </div>
-      <div className="ftr-toolbar">
-        <h3>{labels.results}</h3>
-        <input
-          type="search"
-          aria-label={labels.search}
-          placeholder={labels.search}
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-        />
-      </div>
+      <RunSummary
+        metrics={[
+          { label: labels.total, value: report.numTotalTests },
+          {
+            label: labels.passed,
+            value: report.numPassedTests,
+            tone: report.numPassedTests ? 'success' : undefined,
+          },
+          {
+            label: labels.statuses.failed,
+            value: report.numFailedTests,
+            tone: report.numFailedTests ? 'danger' : undefined,
+          },
+          {
+            label: labels.files,
+            value: report.testResults.length,
+            note: <Duration value={runDuration(report)} unknownLabel={labels.unknown} />,
+          },
+        ]}
+        segments={statuses.map((entry) => ({
+          key: entry.value,
+          label: entry.status,
+          count: entry.count,
+          tone: entry.tone,
+        }))}
+      />
       <ReportGroups
-        filters={
-          <div className="ftr-filters" aria-label={labels.results}>
-            <button
-              type="button"
-              className={buttonVariants({
-                variant: filter === null ? 'secondary' : 'ghost',
-                size: 'sm',
-              })}
-              aria-pressed={filter === null}
-              onClick={() => setFilter(null)}
-            >
-              {labels.all} <small>{all.length}</small>
-            </button>
-            {[...byStatus].map(([status, count]) => (
-              <button
-                key={status}
-                type="button"
-                className={buttonVariants({
-                  variant: filter === status ? 'secondary' : 'ghost',
-                  size: 'sm',
-                })}
-                aria-pressed={filter === status}
-                onClick={() => setFilter(status)}
-              >
-                {statusDisplay(status, labels).status} <small>{count}</small>
-              </button>
-            ))}
-          </div>
-        }
+        query={query}
+        onQueryChange={setQuery}
+        filter={filter}
+        onFilterChange={setFilter}
+        filters={[
+          { value: null, label: labels.all, count: all.length },
+          ...statuses.map((entry) => ({
+            value: entry.value,
+            label: entry.status,
+            count: entry.count,
+            tone: entry.tone,
+          })),
+        ]}
         empty={<p className="ftr-empty">{all.length ? labels.empty : labels.noResults}</p>}
-        searchKey={JSON.stringify([query, filter])}
-        filtered={!!query || filter !== null}
         selectedGroup={
           groups.find((group) => group.rows.some((row) => row.id === selected?.id))?.id
         }
         selectionKey={selected?.id}
-        items={groups.map((group) => ({
-          id: group.id,
-          title: group.file.name,
-          name: (
-            <span className="ftr-mono">
-              {group.file.name.replace(/\\/g, '/').split('/').slice(-4).join('/')}
-            </span>
-          ),
-          count: group.rows.length,
-          badge: group.passed ? <StatusBadge {...statusDisplay('passed', labels)} /> : undefined,
-          children: (
-            <Accordion
-              className="ftr-group-tests"
-              value={
-                selected && group.rows.some((row) => row.id === selected.id) ? [selected.id] : []
-              }
-              onValueChange={(value) => select(typeof value[0] === 'string' ? value[0] : undefined)}
-            >
-              {group.rows.map((row) => (
-                <TestDisclosure
-                  key={row.id}
-                  value={row.id}
-                  badge={
-                    <StatusBadge
-                      {...statusDisplay(row.assertion?.status ?? row.file.status, labels)}
-                    />
-                  }
-                  name={row.assertion?.fullName ?? labels.suiteError}
-                  duration={
-                    <Duration value={row.assertion?.duration} unknownLabel={labels.unknown} />
-                  }
-                >
-                  <VitestTestDetails selected={row} />
-                </TestDisclosure>
-              ))}
-            </Accordion>
-          ),
-        }))}
+        items={groups.map((group) => {
+          const path = group.file.name.replace(/\\/g, '/').split('/').slice(-4);
+          return {
+            id: group.id,
+            title: group.file.name,
+            name: (
+              <span className="ftr-mono">
+                {path.length > 1 && (
+                  <span className="ftr-path-dir">{path.slice(0, -1).join('/')}/</span>
+                )}
+                {path.at(-1)}
+              </span>
+            ),
+            count: group.rows.length,
+            status: <StatusIcon {...group.mark} />,
+            children: (
+              <Accordion
+                className="ftr-group-tests"
+                value={
+                  selected && group.rows.some((row) => row.id === selected.id) ? [selected.id] : []
+                }
+                onValueChange={(value) =>
+                  select(typeof value[0] === 'string' ? value[0] : undefined)
+                }
+              >
+                {group.rows.map((row) => {
+                  const status = row.assertion?.status ?? row.file.status;
+                  const mark = statusDisplay(status, labels);
+                  return (
+                    <TestDisclosure
+                      key={row.id}
+                      value={row.id}
+                      status={<StatusIcon {...mark} />}
+                      name={row.assertion?.fullName ?? labels.suiteError}
+                      note={status !== 'passed' ? mark.status : undefined}
+                      duration={
+                        <Duration value={row.assertion?.duration} unknownLabel={labels.unknown} />
+                      }
+                    >
+                      <VitestTestDetails selected={row} />
+                    </TestDisclosure>
+                  );
+                })}
+              </Accordion>
+            ),
+          };
+        })}
       />
     </section>
   );
@@ -206,53 +187,55 @@ function VitestTestDetails({ selected }: { selected: VitestReportSelection }) {
   const labels = useReportLabels();
   const test = selected.assertion;
   const failures = test?.failureMessages ?? [];
+  const hasMeta = !!(test?.meta && Object.keys(test.meta).length);
   return (
-    <Tabs defaultValue="overview" className="ftr-detail-tabs">
-      <TabsList aria-label={labels.overview}>
-        <TabsTrigger value="overview">{labels.overview}</TabsTrigger>
-        {!!(test?.meta && Object.keys(test.meta).length) && (
-          <TabsTrigger value="metadata">{labels.metadata}</TabsTrigger>
-        )}
-      </TabsList>
-      <TabsContent value="overview">
-        <dl className="ftr-fields">
-          <dt>{labels.file}</dt>
-          <dd className="ftr-mono">{selected.file.name}</dd>
-          <dt>{labels.source}</dt>
-          <dd>{test?.status ?? selected.file.status}</dd>
-          {test && (
+    <DetailTabs
+      label={labels.overview}
+      tabs={[
+        {
+          value: 'overview',
+          label: labels.overview,
+          content: (
             <>
-              <dt>{labels.fullName}</dt>
-              <dd>{test.fullName}</dd>
+              {selected.file.message && (
+                <ErrorDetail type={labels.suiteError} message={selected.file.message} />
+              )}
+              {failures.map((message, index) => (
+                <ErrorDetail key={index} message={message} />
+              ))}
+              <Fields
+                items={[
+                  { label: labels.source, value: test?.status ?? selected.file.status, mono: true },
+                  {
+                    label: labels.file,
+                    value: `${selected.file.name}${test?.location ? `:${test.location.line}:${test.location.column}` : ''}`,
+                    mono: true,
+                  },
+                  { label: labels.fullName, value: test?.fullName },
+                  {
+                    label: labels.tags,
+                    value: test?.tags?.length ? test.tags.join(', ') : undefined,
+                  },
+                ]}
+              />
             </>
-          )}
-          {test?.location && (
-            <>
-              <dt>{labels.location}</dt>
-              <dd className="ftr-mono">
-                {test.location.line}:{test.location.column}
-              </dd>
-            </>
-          )}
-          {!!test?.tags?.length && (
-            <>
-              <dt>{labels.tags}</dt>
-              <dd>{test.tags.join(', ')}</dd>
-            </>
-          )}
-        </dl>
-        {selected.file.message && (
-          <ErrorDetail type={labels.suiteError} message={selected.file.message} />
-        )}
-        {failures.map((message, index) => (
-          <ErrorDetail key={index} message={message} />
-        ))}
-      </TabsContent>
-      {!!(test?.meta && Object.keys(test.meta).length) && (
-        <TabsContent value="metadata">
-          <StdoutPanel title={labels.metadata} content={JSON.stringify(test.meta, null, 2)} />
-        </TabsContent>
-      )}
-    </Tabs>
+          ),
+        },
+        ...(hasMeta
+          ? [
+              {
+                value: 'metadata',
+                label: labels.metadata,
+                content: (
+                  <StdoutPanel
+                    title={labels.metadata}
+                    content={JSON.stringify(test?.meta, null, 2)}
+                  />
+                ),
+              },
+            ]
+          : []),
+      ]}
+    />
   );
 }

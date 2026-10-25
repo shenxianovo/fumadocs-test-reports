@@ -1,8 +1,15 @@
 'use client';
 
 import type { TUnitSpan } from '../types';
-import { Accordion, Accordions } from 'fumadocs-ui/components/accordion';
+import {
+  Accordion,
+  AccordionItem,
+  AccordionHeader,
+  AccordionTrigger,
+  AccordionContent,
+} from 'fumadocs-ui/components/ui/accordion';
 import { Duration, StdoutPanel } from '../../ui';
+import { Fields } from '../../ui/test-disclosure';
 import { useLabels } from './labels';
 
 export function TUnitTraceTimeline({ spans }: { spans: TUnitSpan[] }) {
@@ -24,78 +31,74 @@ export function TUnitTraceTimeline({ spans }: { spans: TUnitSpan[] }) {
     return level;
   }
   return (
-    <Accordions className="ftr-traces">
+    <Accordion className="ftr-traces" multiple>
       {spans
         .toSorted((a, b) => a.startTimeMs - b.startTimeMs)
         .map((span) => (
-          <Accordion
+          <AccordionItem
             className="ftr-span"
             key={`${span.traceId}:${span.spanId}`}
             value={`${span.traceId}:${span.spanId}`}
-            title={
-              <span className="ftr-span-heading">
-                <span style={{ paddingInlineStart: `${depth(span) * 12}px` }}>{span.name}</span>
-                <small>
-                  <Duration value={span.durationMs} unknownLabel={labels.unknown} />
-                </small>
-                <span className="ftr-track" aria-hidden="true">
-                  <span
-                    style={{
-                      marginInlineStart: `${((span.startTimeMs - origin) / extent) * 100}%`,
-                      width: `${(span.durationMs / extent) * 100}%`,
-                    }}
-                  />
-                </span>
-              </span>
-            }
           >
-            <dl className="ftr-fields">
-              <dt>{labels.traceId}</dt>
-              <dd>{span.traceId}</dd>
-              <dt>{labels.spanId}</dt>
-              <dd>{span.spanId}</dd>
-              {span.parentSpanId && (
-                <>
-                  <dt>{labels.parentId}</dt>
-                  <dd>{span.parentSpanId}</dd>
-                </>
-              )}
-              {span.source && (
-                <>
-                  <dt>{labels.traceSource}</dt>
-                  <dd>{span.source}</dd>
-                </>
-              )}
-              {span.kind && (
-                <>
-                  <dt>{labels.kind}</dt>
-                  <dd>{span.kind}</dd>
-                </>
-              )}
-              {span.status && (
-                <>
-                  <dt>{labels.status}</dt>
-                  <dd>
-                    {span.status}
-                    {span.statusMessage ? `: ${span.statusMessage}` : ''}
-                  </dd>
-                </>
-              )}
-              {span.tags?.map((tag, i) => (
-                <div className="ftr-field" key={i}>
-                  <dt>{tag.key}</dt>
-                  <dd>{tag.value}</dd>
-                </div>
-              ))}
-            </dl>
-            {!!span.events?.length && (
-              <StdoutPanel content={JSON.stringify(span.events, null, 2)} title={labels.events} />
-            )}
-            {!!span.links?.length && (
-              <StdoutPanel content={JSON.stringify(span.links, null, 2)} title={labels.links} />
-            )}
-          </Accordion>
+            <AccordionHeader className="ftr-span-header">
+              <AccordionTrigger className="ftr-span-trigger">
+                <span className="ftr-span-heading">
+                  <span
+                    className="ftr-span-name"
+                    style={{ paddingInlineStart: `${depth(span) * 0.75}rem` }}
+                    data-error={span.status === 'Error' || undefined}
+                  >
+                    {span.name}
+                  </span>
+                  <span
+                    className="ftr-track"
+                    aria-hidden="true"
+                    data-error={span.status === 'Error' || undefined}
+                  >
+                    <span
+                      style={{
+                        insetInlineStart: `${((span.startTimeMs - origin) / extent) * 100}%`,
+                        width: `${(span.durationMs / extent) * 100}%`,
+                      }}
+                    />
+                  </span>
+                  <small>
+                    <Duration value={span.durationMs} unknownLabel={labels.unknown} />
+                  </small>
+                </span>
+              </AccordionTrigger>
+            </AccordionHeader>
+            <AccordionContent>
+              <div className="ftr-span-detail">
+                <Fields
+                  items={[
+                    { label: labels.traceId, value: span.traceId, mono: true },
+                    { label: labels.spanId, value: span.spanId, mono: true },
+                    { label: labels.parentId, value: span.parentSpanId || undefined, mono: true },
+                    { label: labels.traceSource, value: span.source || undefined },
+                    { label: labels.kind, value: span.kind || undefined },
+                    {
+                      label: labels.status,
+                      value:
+                        span.status &&
+                        `${span.status}${span.statusMessage ? `: ${span.statusMessage}` : ''}`,
+                    },
+                    ...(span.tags ?? []).map((tag) => ({ label: tag.key, value: tag.value })),
+                  ]}
+                />
+                {!!span.events?.length && (
+                  <StdoutPanel
+                    content={JSON.stringify(span.events, null, 2)}
+                    title={labels.events}
+                  />
+                )}
+                {!!span.links?.length && (
+                  <StdoutPanel content={JSON.stringify(span.links, null, 2)} title={labels.links} />
+                )}
+              </div>
+            </AccordionContent>
+          </AccordionItem>
         ))}
-    </Accordions>
+    </Accordion>
   );
 }

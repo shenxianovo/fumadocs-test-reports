@@ -1,6 +1,6 @@
 import type { BadgeTone } from '../../ui';
 import type { ReportLabels } from '../../i18n/labels';
-import type { VitestJsonReport } from '../types';
+import type { VitestJsonReport, VitestJsonTestFile } from '../types';
 
 /** Display decisions for Vitest JSON only. */
 export function statusDisplay(status: string, labels: ReportLabels) {
@@ -39,4 +39,20 @@ export function runDisplay(report: VitestJsonReport, labels: ReportLabels) {
 export function runDuration(report: VitestJsonReport) {
   const end = Math.max(...report.testResults.map((file) => file.endTime));
   return report.testResults.length && end >= report.startTime ? end - report.startTime : undefined;
+}
+
+/** File mark from its native outcomes; only a fully passing file gets the passing tone. */
+export function fileDisplay(file: VitestJsonTestFile, labels: ReportLabels) {
+  const tests = file.assertionResults;
+  if (
+    file.status === 'passed' &&
+    !file.message &&
+    tests.length > 0 &&
+    tests.every((test) => test.status === 'passed')
+  )
+    return statusDisplay('passed', labels);
+  if (file.status === 'failed' || file.message || tests.some((test) => test.status === 'failed'))
+    return statusDisplay('failed', labels);
+  const other = tests.find((test) => test.status !== 'passed')?.status;
+  return statusDisplay(other ?? (file.status === 'passed' ? 'unknown' : file.status), labels);
 }
