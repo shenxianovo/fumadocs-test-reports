@@ -279,6 +279,8 @@ Open the package's [npm settings](https://www.npmjs.com/package/fumadocs-test-re
 
 Trusted publishing uses GitHub's OIDC identity; no `NPM_TOKEN` secret is required. The workflow uses Node.js 24 with a compatible npm CLI. See [npm trusted publishing](https://docs.npmjs.com/trusted-publishers/) for setup details.
 
+After saving, npm may show **Pending validation** with a deadline. Publish a new version through this workflow before that deadline to validate the connection. A run that skips an already published version does not validate publishing access.
+
 ### Publish a version
 
 Update only the publishable package's version, then commit and push to `main`:
