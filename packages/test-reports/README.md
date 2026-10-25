@@ -259,7 +259,42 @@ See these source references:
 - [TUnit sidecar writer](https://github.com/thomhurst/TUnit/blob/main/src/TUnit.Engine/Reporters/Aggregation/ReportDataJson.cs).
 - [Fumadocs OpenAPI package structure](https://github.com/fuma-nama/fumadocs/tree/dev/packages/openapi).
 
-## Local release
+## Automated releases
+
+The [Publish to npm workflow](../../.github/workflows/publish.yml) runs on pushes to `main`. It checks `packages/test-reports/package.json` against the public npm registry. An already published version is skipped. A new version is published only after tests, type checks, lint, formatting, and the workspace build pass. Registry or network errors fail the workflow rather than triggering publication.
+
+Stable versions use the `latest` npm tag. Prereleases, such as `0.2.0-rc.1`, use `next`.
+
+### One-time npm setup
+
+Open the package's [npm settings](https://www.npmjs.com/package/fumadocs-test-reports/access), add a GitHub Actions trusted publisher, and enter:
+
+| Field                | Value                                       |
+| -------------------- | ------------------------------------------- |
+| Organization or user | `shenxianovo`                               |
+| Repository           | `fumadocs-test-reports`                     |
+| Workflow filename    | `publish.yml`                               |
+| Environment          | Leave empty                                 |
+| Allowed actions      | Enable direct publishing with `npm publish` |
+
+Trusted publishing uses GitHub's OIDC identity; no `NPM_TOKEN` secret is required. The workflow uses Node.js 24 with a compatible npm CLI. See [npm trusted publishing](https://docs.npmjs.com/trusted-publishers/) for setup details.
+
+### Publish a version
+
+Update only the publishable package's version, then commit and push to `main`:
+
+```sh
+cd packages/test-reports
+npm version patch --no-git-tag-version
+cd ../..
+git add packages/test-reports/package.json
+git commit -m "chore: release fumadocs-test-reports"
+git push origin main
+```
+
+CI does not bump versions automatically. The private root package's version does not control publication. To retry a failed release, rerun the workflow or use **Actions → Publish to npm → Run workflow** on `main`. The same registry check prevents publishing an existing version again.
+
+## Local release checks
 
 Run the workspace checks from the repository root:
 

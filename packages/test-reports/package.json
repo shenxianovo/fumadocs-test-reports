@@ -10,6 +10,11 @@
     "vitest"
   ],
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/shenxianovo/fumadocs-test-reports.git",
+    "directory": "packages/test-reports"
+  },
   "files": [
     "dist",
     "css"

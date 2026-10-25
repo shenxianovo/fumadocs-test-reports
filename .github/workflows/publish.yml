@@ -1,0 +1,74 @@
+name: Publish to npm
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: npm-publish
+  cancel-in-progress: false
+
+jobs:
+  version:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      publish: ${{ steps.release.outputs.publish }}
+      tag: ${{ steps.release.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - name: Test release detection
+        run: node --test .github/scripts/check-release.test.mjs
+      - name: Check whether this version is published
+        id: release
+        run: node .github/scripts/check-release.mjs
+
+  publish:
+    needs: version
+    if: needs.version.outputs.publish == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          registry-url: 'https://registry.npmjs.org'
+          package-manager-cache: false
+      - uses: pnpm/action-setup@v6
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Test
+        run: pnpm test --run
+      - name: Check types
+        run: pnpm types:check
+      - name: Lint
+        run: pnpm lint
+      - name: Check formatting
+        run: pnpm lint:format
+      - name: Build
+        run: pnpm build
+      - name: Inspect package
+        working-directory: packages/test-reports
+        run: npm pack --dry-run --ignore-scripts
+      - name: Publish with npm trusted publishing
+        working-directory: packages/test-reports
+        env:
+          RELEASE_TAG: ${{ needs.version.outputs.tag }}
+        run: npm publish --access public --ignore-scripts --tag "$RELEASE_TAG"
